@@ -75,4 +75,15 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         if (is_array($role)) return in_array($this->role, $role);
         return $this->role === $role;
     }
+
+    // Relationship on warehouse location
+    public function warehouseLocations()
+    {
+        return $this->hasMany(WarehouseLocation::class, 'staff_id');
+    }
+
+    // Relationship on inventory requests made by the user
+    public function inventoryRequestUser(){
+        return $this->hasMany(InventoryRequest::class, 'requested_by');
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\WarehouseLocation;
 use App\Http\Requests\StoreLocationRequest;
+use App\Models\InventoryRequest;
 use Illuminate\Http\Request;
 
 class WarehouseLocationController extends Controller
@@ -125,6 +126,19 @@ class WarehouseLocationController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Warehouse deleted successfully'
+        ]);
+    }
+
+    //get warehouse records
+    public function getWarehouseRecords(Request $request, $id)
+    {
+        //get inventory requests with warehouse id
+        $warehouses = InventoryRequest::with(['inventory.defectItems','requester','project','shipmentItem'])->where('warehouse_id', $id)->paginate(10);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Warehouse records retrieved successfully',
+            'data' => $warehouses,
         ]);
     }
 }

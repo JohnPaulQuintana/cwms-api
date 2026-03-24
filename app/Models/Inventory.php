@@ -16,4 +16,9 @@ class Inventory extends Model
     {
         return $this->belongsTo(WarehouseLocation::class, 'location_id');
     }
+
+    public function defectItems()
+    {
+        return $this->hasMany(DefectItem::class, 'inventory_id');
+    }
 }

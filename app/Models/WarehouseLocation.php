@@ -15,5 +15,15 @@ class WarehouseLocation extends Model
     {
         return $this->hasMany(Inventory::class, 'location_id');
     }
+
+    //belongs to staff (user)
+    public function staff(){
+        return $this->belongsTo(User::class, 'staff_id');
+    }
+
+    //relationship  with inventory requests
+    public function inventoryRequests(){
+        return $this->hasMany(InventoryRequest::class, 'warehouse_id');
+    }
 }
 

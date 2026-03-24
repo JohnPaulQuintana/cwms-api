@@ -192,7 +192,7 @@ class UserManagementController extends Controller
         ]);
     }
 
-    // Admin-only for manager
+    // manager
     public function manager(Request $request)
     {
         $authUserId = auth()->id(); // currently authenticated user ID

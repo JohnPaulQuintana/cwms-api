@@ -48,12 +48,23 @@ class ProjectController extends Controller
     }
 
     /**
+     * Show specific project for manager
+     * Roles: Project Manager
+     */
+    public function show_my_projects()
+    {
+        $user = auth()->user();
+        $project = Project::with('manager')->where('manager_id', $user->id)->paginate(100);
+        return response()->json(['success' => true, 'data' => $project]);
+    }
+
+    /**
      * Create a new project
      * Roles: Admin only
      */
     public function store(Request $request)
     {
-        $this->authorizeRole(['admin']);
+        $this->authorizeRole(['admin', 'project_manager']);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -103,7 +114,7 @@ class ProjectController extends Controller
         return response()->json(['success' => true, 'message' => 'Project deleted']);
     }
 
-    // 🧩 Utility function for role-based restrictions
+    //  Utility function for role-based restrictions
     private function authorizeRole(array $roles)
     {
         $user = auth()->user();
