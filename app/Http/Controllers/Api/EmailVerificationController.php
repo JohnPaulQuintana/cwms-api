@@ -48,11 +48,12 @@ class EmailVerificationController extends Controller
         // Mark email as verified
         $user->markEmailAsVerified();
 
-        return response()->json([
-            'success' => true,
-            'type' => 'success',
-            'message' => 'Email verified successfully. You can now log in.',
-            'data' => null
-        ]);
+        // return response()->json([
+        //     'success' => true,
+        //     'type' => 'success',
+        //     'message' => 'Email verified successfully. You can now log in.',
+        //     'data' => null
+        // ]);
+        return redirect('https://cwms-app.netlify.app/login?verified=1'); // Verified successfully
     }
 }
