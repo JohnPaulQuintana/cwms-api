@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\CustomVerifyEmail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
-use App\Notifications\CustomVerifyEmail;
 
 class UserManagementController extends Controller
 {
@@ -19,12 +20,12 @@ class UserManagementController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'type' => 'error',
                 'message' => 'User not found.',
-                'data' => null
+                'data' => null,
             ], 404);
         }
 
@@ -33,17 +34,17 @@ class UserManagementController extends Controller
                 'success' => true,
                 'type' => 'info',
                 'message' => 'Email already verified.',
-                'data' => null
+                'data' => null,
             ]);
         }
 
-        $user->notify(new CustomVerifyEmail());
+        $user->notify(new CustomVerifyEmail);
 
         return response()->json([
             'success' => true,
             'type' => 'success',
             'message' => 'Verification email resent.',
-            'data' => null
+            'data' => null,
         ]);
     }
 
@@ -66,7 +67,7 @@ class UserManagementController extends Controller
         ]);
 
         // Send custom verification email
-        $user->notify(new CustomVerifyEmail());
+        $user->notify(new CustomVerifyEmail);
 
         $token = JWTAuth::fromUser($user);
 
@@ -76,8 +77,8 @@ class UserManagementController extends Controller
             'message' => 'User created successfully. Verification email sent.',
             'data' => [
                 'user' => $user,
-                'token' => $token
-            ]
+                'token' => $token,
+            ],
         ]);
     }
 
@@ -86,29 +87,35 @@ class UserManagementController extends Controller
     {
         $credentials = $request->only('email', 'password');
 
-        if (!$token = JWTAuth::attempt($credentials)) {
+        if (! $token = JWTAuth::attempt($credentials)) {
             return response()->json([
                 'success' => false,
                 'type' => 'error',
                 'message' => 'Invalid credentials',
-                'data' => null
+                'data' => null,
             ], 401);
         }
 
         $user = auth()->user();
 
-        if (!$user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedEmail()) {
             return response()->json([
                 'success' => false,
                 'type' => 'email_verification_required',
                 'message' => 'Please verify your email before logging in.',
-                'data' => null
+                'data' => null,
             ], 403);
         }
 
-        // ✅ Set user as active when login is successful
+        // Set user as active
         $user->is_active = 1;
         $user->save();
+
+        $isStaff = DB::table('warehouse_locations')->where('staff_id', $user->id)->exists();
+        $isManager = DB::table('projects')->where('manager_id', $user->id)->exists();
+
+        // Admins are exempt from admin approval
+        $needsApproval = $user->role !== 'admin' && ! $isStaff && ! $isManager;
 
         return response()->json([
             'success' => true,
@@ -116,11 +123,11 @@ class UserManagementController extends Controller
             'message' => 'Login successful',
             'data' => [
                 'user' => $user,
-                'token' => $token
-            ]
+                'token' => $token,
+                'admin_approval' => $needsApproval,
+            ],
         ]);
     }
-
 
     // Logout
     public function logout(Request $request)
@@ -141,7 +148,7 @@ class UserManagementController extends Controller
                 'success' => true,
                 'type' => 'success',
                 'message' => 'Logged out successfully',
-                'data' => null
+                'data' => null,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -160,7 +167,7 @@ class UserManagementController extends Controller
             'success' => true,
             'type' => 'success',
             'message' => 'User profile retrieved successfully',
-            'data' => auth()->user()
+            'data' => auth()->user(),
         ]);
     }
 
@@ -174,7 +181,7 @@ class UserManagementController extends Controller
         $query = User::where('id', '!=', $authUserId);
 
         // If there's a search term, filter by name or email
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
@@ -188,7 +195,7 @@ class UserManagementController extends Controller
             'success' => true,
             'type' => 'success',
             'message' => 'Users retrieved successfully',
-            'data' => $users
+            'data' => $users,
         ]);
     }
 
@@ -203,7 +210,7 @@ class UserManagementController extends Controller
             ->where('role', 'project_manager'); // only project managers
 
         // If there's a search term, filter by name or email
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
@@ -217,7 +224,7 @@ class UserManagementController extends Controller
             'success' => true,
             'type' => 'success',
             'message' => 'Project managers retrieved successfully',
-            'data' => $users
+            'data' => $users,
         ]);
     }
 
@@ -232,7 +239,7 @@ class UserManagementController extends Controller
             ->where('role', 'warehouse_staff'); // only project managers
 
         // If there's a search term, filter by name or email
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
@@ -246,22 +253,20 @@ class UserManagementController extends Controller
             'success' => true,
             'type' => 'success',
             'message' => 'Project managers retrieved successfully',
-            'data' => $users
+            'data' => $users,
         ]);
     }
-
-
 
     public function show($id)
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'type' => 'error',
                 'message' => 'User not found',
-                'data' => null
+                'data' => null,
             ], 404);
         }
 
@@ -269,7 +274,7 @@ class UserManagementController extends Controller
             'success' => true,
             'type' => 'success',
             'message' => 'User retrieved successfully',
-            'data' => $user
+            'data' => $user,
         ]);
     }
 
@@ -277,12 +282,12 @@ class UserManagementController extends Controller
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'type' => 'error',
                 'message' => 'User not found',
-                'data' => null
+                'data' => null,
             ], 404);
         }
 
@@ -299,7 +304,7 @@ class UserManagementController extends Controller
             'success' => true,
             'type' => 'success',
             'message' => 'User updated successfully',
-            'data' => $user
+            'data' => $user,
         ]);
     }
 
@@ -307,12 +312,12 @@ class UserManagementController extends Controller
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'type' => 'error',
                 'message' => 'User not found',
-                'data' => null
+                'data' => null,
             ], 404);
         }
 
@@ -322,7 +327,107 @@ class UserManagementController extends Controller
             'success' => true,
             'type' => 'success',
             'message' => 'User deleted successfully',
-            'data' => null
+            'data' => null,
+        ]);
+    }
+
+    public function updateInfo(Request $request, $id)
+    {
+        $user = User::find($id);
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'type' => 'error',
+                'message' => 'User not found',
+                'data' => null,
+            ], 404);
+        }
+
+        // Validation rules
+        $rules = [
+            'name' => 'sometimes|string|max:255',
+            'email' => ['sometimes', 'email', Rule::unique('users')->ignore($user->id)],
+            // 'currentPassword' => 'sometimes|string',
+            // 'newPassword' => 'sometimes|string|min:6',
+            // 'confirmPassword' => 'sometimes|string|same:newPassword',
+        ];
+
+        $validated = $request->validate($rules);
+
+        // // 🔐 If changing password, check current password first
+        // if (! empty($validated['newPassword'])) {
+        //     if (empty($validated['currentPassword']) || ! Hash::check($validated['currentPassword'], $user->password)) {
+        //         return response()->json([
+        //             'success' => false,
+        //             'type' => 'error',
+        //             'message' => 'Current password is incorrect',
+        //             'data' => null,
+        //         ], 422);
+        //     }
+        //     // Password is correct, update it
+        //     $user->password = Hash::make($validated['newPassword']);
+        // }
+
+        // ✅ Now update name/email
+        $user->fill([
+            'name' => $validated['name'] ?? $user->name,
+            'email' => $validated['email'] ?? $user->email,
+        ]);
+
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'type' => 'success',
+            'message' => 'User info updated successfully',
+            'data' => $user,
+        ]);
+    }
+
+    public function updatePassword(Request $request, $id)
+    {
+        $user = User::find($id);
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'type' => 'error',
+                'message' => 'User not found',
+                'data' => null,
+            ], 404);
+        }
+
+        // Validation rules
+        $rules = [
+            'currentPassword' => 'sometimes|string',
+            'newPassword' => 'sometimes|string|min:6',
+            'confirmPassword' => 'sometimes|string|same:newPassword',
+        ];
+
+        $validated = $request->validate($rules);
+
+        // 🔐 If changing password, check current password first
+        if (! empty($validated['newPassword'])) {
+            if (empty($validated['currentPassword']) || ! Hash::check($validated['currentPassword'], $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'error',
+                    'message' => 'Current password is incorrect',
+                    'data' => null,
+                ], 422);
+            }
+            // Password is correct, update it
+            $user->password = Hash::make($validated['newPassword']);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'type' => 'success',
+            'message' => 'User info updated successfully',
+            'data' => $user,
         ]);
     }
 }

@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public route
 Route::post('/login', [UserManagementController::class, 'login']);
+Route::post('/register/user', [UserManagementController::class, 'register']);
 
 // Resend verification email
 Route::post('/email/resend', [UserManagementController::class, 'resendVerificationEmail']);
@@ -27,6 +28,9 @@ Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 've
 
 // Authenticated routes
 Route::group(['middleware' => 'auth:api'], function () {
+
+    Route::patch('/users/{id}', [UserManagementController::class, 'updateInfo']);
+    Route::patch('/users/{id}/password', [UserManagementController::class, 'updatePassword']);
 
     Route::get('/profile', [UserManagementController::class, 'profile']);
     Route::post('/logout', [UserManagementController::class, 'logout']);
