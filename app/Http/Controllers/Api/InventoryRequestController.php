@@ -8,6 +8,7 @@ use App\Models\Inventory;
 use App\Models\InventoryRequest;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
+use App\Models\WarehouseLocation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -25,7 +26,7 @@ class InventoryRequestController extends Controller
             'sort_order' => 'nullable|in:asc,desc',
         ]);
 
-        $query = InventoryRequest::with(['inventory', 'warehouse', 'project']);
+        $query = InventoryRequest::with(['inventory', 'warehouse', 'project','returns']);
 
         // Project filter
         if ($request->project_id) {
@@ -52,6 +53,7 @@ class InventoryRequestController extends Controller
         $requests->getCollection()->transform(function ($item) {
             return [
                 'id' => $item->id,
+                'warehouse_id' => $item->warehouse_id,
                 'inventory_name' => $item->inventory->name,
                 'requested_qty' => $item->requested_qty,
                 'warehouse_name' => $item->warehouse->name,
@@ -61,6 +63,14 @@ class InventoryRequestController extends Controller
                 'project_name' => $item->project->name,
                 'status' => $item->status,
                 'reject_reason' => $item->rejection_reason,
+                'returned_items' => $item->returns->map(fn($r) => [
+                    'id' => $r->id,
+                    'quantity' => $r->quantity,
+                    'warehouse_name' => $r->warehouse_name,
+                    'unit' => $r->unit,
+                    'status' => $r->status, // pending, approved, merged
+                    'created_at' => $r->created_at,
+                ]),
             ];
         });
 
@@ -250,6 +260,18 @@ class InventoryRequestController extends Controller
                 ], 422);
             }
 
+            // ✅ Get staff_id from warehouse_locations
+            $warehouseLocation = WarehouseLocation::where('id', $inventoryRequest->warehouse_id)->first();
+
+            if (!$warehouseLocation) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Warehouse location not found.',
+                ], 404);
+            }
+
+            $staffId = $warehouseLocation->staff_id;
+
             // ✅ Find or create shipment for the same project
             $shipment = Shipment::firstOrCreate(
                 [
@@ -258,7 +280,7 @@ class InventoryRequestController extends Controller
                     'status' => 'pending',
                 ],
                 [
-                    'user_id' => auth()->id(),
+                    'user_id' => $staffId,
                 ]
             );
 

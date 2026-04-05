@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\DefectController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\InventoryRequestController;
+use App\Http\Controllers\Api\InventoryReturnedController;
 use App\Http\Controllers\Api\MaterialDeliveryController;
 use App\Http\Controllers\Api\OverviewController;
 use App\Http\Controllers\Api\ProjectController;
@@ -37,11 +38,19 @@ Route::group(['middleware' => 'auth:api'], function () {
 
 
     Route::get('/inventory', [InventoryController::class, 'index']);
+    Route::post('/inventory/reorder/{id}', [InventoryController::class, 'reorder']);
+    Route::post('/inventory/merge-single/{id}', [InventoryController::class, 'mergeSingle']);
+    Route::post('/inventory/merge-all/{id}', [InventoryController::class, 'mergeAll']);
     Route::get('/inventory/staff', [InventoryController::class, 'index_staff']);
     Route::get('/inventory/{id}', [InventoryController::class, 'show']);
     Route::post('/inventory', [InventoryController::class, 'store']);
     Route::post('/inventory/update/{id}', [InventoryController::class, 'update']);
     Route::delete('/inventory/{id}', [InventoryController::class, 'destroy']);
+
+    // returned item
+    Route::post('/inventory/return', [InventoryReturnedController::class, 'returnInventory']);
+    Route::patch('/inventory/return/{id}/approve', [InventoryReturnedController::class, 'approveReturn']);
+    Route::patch('/inventory/return/{id}/merge', [InventoryReturnedController::class, 'mergeReturn']);
 
     // send an inventory request
     Route::post('/inventory/request', [InventoryRequestController::class, 'store']);
@@ -92,6 +101,11 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::get('/users/defect-items', [DefectController::class, 'getDefectItems']);
     Route::post('/users/defect-items', [DefectController::class, 'addDefectItem']);
 
+    //returned items
+    Route::get('/users/returned-items', [InventoryReturnedController::class, 'getReturnedItems']);
+    Route::post('/users/returned-items/{id}/approved', [InventoryReturnedController::class, 'approveReturn']);
+    Route::post('/users/returned-items/{id}/merge', [InventoryReturnedController::class, 'mergeReturn']);
+    
     // overview for manager and staff
     // get the overview
     Route::get('/overviewManager/{id}', [OverviewController::class, 'getOverviewManager']);

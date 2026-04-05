@@ -9,7 +9,7 @@ class Inventory extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'sku', 'description', 'quantity', 'unit', 'location_id'
+        'name', 'sku', 'description', 'quantity', 'reorder_quantity', 'unit', 'location_id'
     ];
 
     public function location()
@@ -20,5 +20,10 @@ class Inventory extends Model
     public function defectItems()
     {
         return $this->hasMany(DefectItem::class, 'inventory_id');
+    }
+
+    public function reorders()
+    {
+        return $this->hasMany(InventoryReorder::class, 'inventory_id');
     }
 }

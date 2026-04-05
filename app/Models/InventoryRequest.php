@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class InventoryRequest extends Model
 {
@@ -16,17 +16,17 @@ class InventoryRequest extends Model
         'requested_by',
         'status',
         'project_id',
-        'rejection_reason'
+        'rejection_reason',
     ];
 
     public function inventory()
     {
-        return $this->belongsTo(Inventory::class, "inventory_id");
+        return $this->belongsTo(Inventory::class, 'inventory_id');
     }
 
     public function warehouse()
     {
-        return $this->belongsTo(WarehouseLocation::class, "warehouse_id");
+        return $this->belongsTo(WarehouseLocation::class, 'warehouse_id');
     }
 
     public function requester()
@@ -38,9 +38,14 @@ class InventoryRequest extends Model
     {
         return $this->belongsTo(Project::class, 'project_id');
     }
-    
+
     public function shipmentItem()
     {
         return $this->hasOne(ShipmentItem::class);
+    }
+
+    public function returns()
+    {
+        return $this->hasMany(ReturnedInventory::class, 'inventory_request_id');
     }
 }
