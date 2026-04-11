@@ -7,6 +7,7 @@ use App\Models\WarehouseLocation;
 use App\Http\Requests\StoreLocationRequest;
 use App\Models\InventoryRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class WarehouseLocationController extends Controller
 {
@@ -15,30 +16,41 @@ class WarehouseLocationController extends Controller
         $this->middleware('auth:api');
     }
 
-    public function index(Request $request)
-    {
-        $search = $request->query('search'); // optional search keyword
-        $perPage = $request->query('per_page', 10); // default to 10 per page
+   public function index(Request $request)
+{
+    $search = $request->query('search');
+    $perPage = $request->query('per_page', 10);
 
-        $query = WarehouseLocation::query();
+    $query = DB::table('warehouse_locations');
 
-        // Apply search filter if provided
-        if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhere('address', 'like', "%{$search}%");
-            });
-        }
-
-        // Paginate and sort by latest
-        $warehouses = $query->orderBy('created_at', 'desc')->paginate($perPage);
-
-        return response()->json([
-            'success' => true,
-            'data' => $warehouses
-        ]);
+    if (!empty($search)) {
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('description', 'like', "%{$search}%")
+              ->orWhere('address', 'like', "%{$search}%");
+        });
     }
+
+    $warehouses = $query->orderBy('created_at', 'desc')
+        ->paginate($perPage);
+
+    // manually attach staff_name
+    $warehouses->getCollection()->transform(function ($warehouse) {
+
+        $staff = DB::table('users')
+            ->where('id', $warehouse->staff_id)
+            ->first();
+
+        $warehouse->staff_name = $staff ? $staff->name : null;
+
+        return $warehouse;
+    });
+
+    return response()->json([
+        'success' => true,
+        'data' => $warehouses
+    ]);
+}
 
     public function inventory_staff(Request $request)
     {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\InventoryRequestController;
 use App\Http\Controllers\Api\InventoryReturnedController;
 use App\Http\Controllers\Api\MaterialDeliveryController;
+use App\Http\Controllers\Api\NavCountController;
 use App\Http\Controllers\Api\OverviewController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ShipmentController;
@@ -30,6 +31,8 @@ Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 've
 // Authenticated routes
 Route::group(['middleware' => 'auth:api'], function () {
 
+    // Get the Navigation counts
+    Route::get('/count/{role}', [NavCountController::class, 'index']);
     Route::patch('/users/{id}', [UserManagementController::class, 'updateInfo']);
     Route::patch('/users/{id}/password', [UserManagementController::class, 'updatePassword']);
 
@@ -105,6 +108,7 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::get('/users/returned-items', [InventoryReturnedController::class, 'getReturnedItems']);
     Route::post('/users/returned-items/{id}/approved', [InventoryReturnedController::class, 'approveReturn']);
     Route::post('/users/returned-items/{id}/merge', [InventoryReturnedController::class, 'mergeReturn']);
+    Route::post('/users/returned-items/{id}/rejected', [InventoryReturnedController::class, 'rejectedReturn']);
     
     // overview for manager and staff
     // get the overview

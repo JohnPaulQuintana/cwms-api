@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\DefectItem;
 use App\Models\Inventory;
 use App\Models\InventoryRequest;
 use App\Models\ReturnedInventory;
+use App\Models\ShipmentItem;
 use Illuminate\Http\Request;
 
 class InventoryReturnedController extends Controller
@@ -102,5 +104,46 @@ class InventoryReturnedController extends Controller
             'success' => true,
             'data' => $returnedItem,
         ]);
+    }
+
+    public function rejectedReturn($id)
+    {
+        $returnedItem = ReturnedInventory::findOrFail($id);
+        if ($returnedItem->status !== 'approved') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only approved returns can be merged',
+            ], 400);
+        }
+        // to get the shipment_id
+        $shipment_items = ShipmentItem::where('inventory_request_id', $returnedItem->inventory_request_id)->first();
+        
+        // to get inventory_id
+        $inventoryRequest = InventoryRequest::findOrFail($returnedItem->inventory_request_id); // or map to inventory id
+        
+        // insert it to defect_items
+        $defect = DefectItem::create([
+            "shipment_id"=>$shipment_items->shipment_id,
+            "inventory_id"=>$inventoryRequest->inventory_id,
+            "quantity"=>$returnedItem->quantity,
+            "reason"=>"Returned Item unusable."
+        ]);
+
+        
+        if (!$defect){
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot be added to defect items.',
+            ]);
+        }
+
+        // Mark return as merged
+        $returnedItem->status = 'merged';
+        $returnedItem->save();
+
+         return response()->json([
+                'success' => true,
+                'message' => 'Successfully added to defect items.',
+            ]);
     }
 }
